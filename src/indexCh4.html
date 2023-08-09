@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+    </style>
+</head>
+
+<body>
+    <div id="viz5">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz4">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz3">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz2">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="controls"></div>
+
+    <div id="controlsCustom"></div>
+</body>
+
+<script>
+    streamGraph02();
+    function streamGraph02() {
+
+
+        d3gg.promiseCSV("data/movies.csv").then(data => {
+
+            var fillScale = d3.scaleOrdinal()
+                .domain(["titanic", "avatar", "akira", "frozen", "deliverance", "avengers"])
+                .range(["#fcd88a", "#cf7c1c", "#93c464", "#75734F", "#5eafc6", "#41a368"]);
+
+            var legendA = d3.legendColor().scale(fillScale)
+                .orient("horizontal")
+                .shapePadding(60)
+                .shapeWidth(12)
+                .shapeHeight(30);
+
+            d3.select("#viz5 svg").append("g").attr("transform", "translate(500,0)").call(legendA);
+
+            const xScale = d3.scaleLinear().domain([1, 8]).range([20, 470]);
+            const yScale = d3.scaleLinear().domain([0, 55]).range([480, 20]);
+
+            Object.keys(data[0]).forEach(key => {
+                if (key != "day") {
+                    var movieArea = d3.area()
+                        .x(d => xScale(d.day))
+                        .y0(d => yScale(simpleStacking(d, key) - d[key]))
+                        .y1(d => yScale(simpleStacking(d, key)))
+                        .curve(d3.curveBasis);
+
+                    d3.select("#viz5 svg")
+                        .append("path")
+                        .style("id", key + "area")
+                        .attr("d", movieArea(data))
+                        .attr("fill", fillScale(key))
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 1)
+                }
+            });
+
+            function simpleStacking(lineData, lineKey) {
+                var newHeight = 0;
+                Object.keys(lineData).every(key => {
+                    if (key !== "day") {
+                        newHeight += parseInt(lineData[key]);
+                        if (key === lineKey) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                return newHeight;
+            }
+        });
+    }
+
+    streamGraph01();
+    function streamGraph01() {
+        d3gg.promiseCSV("data/movies.csv").then(data => {
+            const xScale = d3.scaleLinear().domain([1, 8]).range([20, 470]);
+            const yScale = d3.scaleLinear().domain([0, 40]).range([480, 20]);
+
+            Object.keys(data[0]).forEach(key => {
+                if (key != "day") {
+                    var movieArea = d3.line()
+                        .x(d => xScale(d.day))
+                        .y(d => yScale(d[key]))
+                        .curve(d3.curveCardinal);
+
+                    d3.select("#viz4 svg")
+                        .append("path")
+                        .style("id", key + "area")
+                        .attr("d", movieArea(data))
+                        .attr("fill", "none")
+                        .attr("stroke", "#75739F")
+                        .attr("stroke-width", 3)
+                        .style("opacity", .75)
+                }
+            });
+        });
+    }
+
+    scatterPlot02()
+    function scatterPlot02() {
+        d3gg.promiseCSV("data/tweetdata.csv").then(data => {
+            const blue = "#5eaec5", green = "#92c463", orange = "#fe9a22";
+
+            const xScale = d3.scaleLinear().domain([1, 10.5]).range([20, 480]);
+            const yScale = d3.scaleLinear().domain([0, 35]).range([480, 20]);
+
+            let xAxis = d3.axisBottom()
+                .scale(xScale)
+                .tickSize(480)
+                .tickValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+            let xAxisSelect = d3.select("#viz3 svg").append("g").attr("id", "xAxisG").style("stroke", "lightgray").call(xAxis);
+
+            xAxisSelect.selectAll("path").style("stroke", "lightgray");
+            xAxisSelect.selectAll("line").style("stroke", "lightgray");
+
+
+
+            let yAxis = d3.axisRight()
+                .scale(yScale)
+                .ticks(10)
+                .tickSize(480);
+
+            let yAxisSelect = d3.select("#viz3 svg").append("g").attr("id", "yAxisG").style("stroke", "lightgray").call(yAxis);
+
+            yAxisSelect.selectAll("path").style("stroke", "lightgray");
+            yAxisSelect.selectAll("line").style("stroke", "lightgray");
+
+            d3.select("#viz3 svg").selectAll("circle.tweets")
+                .data(data).enter()
+                .append("circle")
+                .attr("class", "tweets")
+                .attr("r", 5)
+                .attr("cx", d => xScale(d.day))
+                .attr("cy", d => yScale(d.tweets))
+                .style("fill", blue);
+
+            d3.select("#viz3 svg").selectAll("circle.retweets")
+                .data(data).enter()
+                .append("circle")
+                .attr("class", "retweets")
+                .attr("r", 5)
+                .attr("cx", d => xScale(d.day))
+                .attr("cy", d => yScale(d.retweets))
+                .style("fill", green);
+
+            d3.select("#viz3 svg").selectAll("circle.favorites")
+                .data(data).enter()
+                .append("circle")
+                .attr("class", "favorites")
+                .attr("r", 5)
+                .attr("cx", d => xScale(d.day))
+                .attr("cy", d => yScale(d.favorites))
+                .style("fill", orange);
+
+            var tweetLine = d3.line()
+                .curve(d3.curveBasis)
+                .defined(d => d.y !== null)
+                .x(d => xScale(d.day))
+                .y(d => yScale(d.tweets));
+
+            d3.select("#viz3 svg")
+                .append("path")
+                .attr("d", tweetLine(data))
+                .attr("fill", "none")
+                .attr("stroke", blue)
+                .attr("stroke-width", "2px");
+
+            var retweetLine = d3.line()
+                .curve(d3.curveStep)
+                .defined(d => d.y !== null)
+                .x(d => xScale(d.day))
+                .y(d => yScale(d.retweets));
+
+            d3.select("#viz3 svg")
+                .append("path")
+                .attr("d", retweetLine(data))
+                .attr("fill", "none")
+                .attr("stroke", green)
+                .attr("stroke-width", "2px");
+
+            var favoritesLine = d3.line()
+                .curve(d3.curveCardinal)
+                .defined(d => d.y !== null)
+                .x(d => xScale(d.day))
+                .y(d => yScale(d.favorites));
+
+            d3.select("#viz3 svg")
+                .append("path")
+                .attr("d", favoritesLine(data))
+                .attr("fill", "none")
+                .attr("stroke", orange)
+                .attr("stroke-width", "2px");
+
+
+        });
+    }
+
+
+    scatter01();
+    function scatter01() {
+        var scatterData = [
+            { friends: 5, salary: 22000 },
+            { friends: 3, salary: 18000 },
+            { friends: 10, salary: 88000 },
+            { friends: 0, salary: 180000 },
+            { friends: 27, salary: 56000 },
+            { friends: 8, salary: 74000 }
+        ];
+
+        var xExtent = d3.extent(scatterData, d => d.salary);
+        var yExtent = d3.extent(scatterData, d => d.friends);
+        var xScale = d3.scaleLinear().domain(xExtent).range([0, 500]);
+        var yScale = d3.scaleLinear().domain(yExtent).range([0, 500]);
+
+        d3.select("#viz svg").selectAll("circle")
+            .data(scatterData).enter()
+            .append("circle")
+            .attr("r", 5)
+            .attr("cx", d => xScale(d.salary))
+            .attr("cy", d => yScale(d.friends));
+
+        var yAxis = d3.axisRight().scale(yScale).tickSize(500).ticks(16);
+        d3.select("#viz svg").append("g").attr("id", "yAxisG").call(yAxis);
+
+        var xAxis = d3.axisBottom().scale(xScale).tickSize(500).ticks(4);
+        d3.select("#viz svg").append("g").attr("id", "xAxisG").call(xAxis);
+
+        // d3.selectAll("#viz #xAxisG").attr("transform", "translate(0,500)");
+    }
+
+    boxPlot01();
+    function boxPlot01() {
+        d3gg.promiseCSV("data/boxplot.csv").then(data => {
+            var tickSize = 470;
+
+            // var xExtent2 = d3.extent(data, d => d.day);
+            // var yExtent2 = d3.extent(data, d => d.median);
+            var xScale2 = d3.scaleLinear().domain([1, 8]).range([20, tickSize]);
+            var yScale2 = d3.scaleLinear().domain([0, 100]).range([tickSize + 10, 20]);
+
+            var yAxis2 = d3.axisRight().scale(yScale2).ticks(8).tickSize(tickSize);
+            d3.select("#viz2 svg").append("g")
+                // .attr("transform", `translate(${tickSize},0)`)
+                .attr("id", "yAxisG")
+                .call(yAxis2);
+
+            var xAxis2 = d3.axisBottom().scale(xScale2).tickSize(-tickSize).tickValues([1, 2, 3, 4, 5, 6, 7]);
+            d3.select("#viz2 svg").append("g")
+                .attr("transform", `translate(0,${tickSize + 10})`)
+                .attr("id", "xAxisG")
+                .call(xAxis2);
+
+            // d3.select("#viz2 svg").selectAll("circle")
+            //     .data(data).enter()
+            //     .append("circle")
+            //     .attr("class", "tweets")
+            //     .attr("r", 5)
+            //     .attr("cx", d => xScale2(d.day))
+            //     .attr("cy", d => yScale2(d.median))
+            //     .style("fill", "darkgray");
+
+            d3.select("#viz2 svg").selectAll("g.box")
+                .data(data).enter()
+                .append("g")
+                .attr("class", "box")
+                .attr("transform", d => `translate(${xScale2(d.day)}, ${yScale2(d.median)})`)
+                .each(function (d, i) {
+                    d3.select(this)
+                        .append("line")
+                        .attr("class", "range")
+                        .attr("x1", 0)
+                        .attr("x2", 0)
+                        .attr("y1", yScale2(d.max) - yScale2(d.median))
+                        .attr("y2", yScale2(d.min) - yScale2(d.median))
+                        .style("stroke", "black")
+                        .style("stroke-width", "4px");
+
+                    d3.select(this)
+                        .append("line")
+                        .attr("class", "max")
+                        .attr("x1", -10)
+                        .attr("x2", 10)
+                        .attr("y1", yScale2(d.max) - yScale2(d.median))
+                        .attr("y2", yScale2(d.max) - yScale2(d.median))
+                        .style("stroke", "black")
+                        .style("stroke-width", "4px");
+
+                    d3.select(this)
+                        .append("line")
+                        .attr("class", "min")
+                        .attr("x1", -10)
+                        .attr("x2", 10)
+                        .attr("y1", yScale2(d.min) - yScale2(d.median))
+                        .attr("y2", yScale2(d.min) - yScale2(d.median))
+                        .style("stroke", "black")
+                        .style("stroke-width", "4px");
+
+                    d3.select(this)
+                        .append("rect")
+                        .attr("class", "range")
+                        .attr("width", 20)
+                        .attr("x", -10)
+                        .attr("y", yScale2(d.q3) - yScale2(d.median))
+                        .attr("height", yScale2(d.q1) - yScale2(d.q3))
+                        .style("fill", "white")
+                        .style("stroke", "black")
+                        .style("stroke-width", "2px");
+
+                    d3.select(this)
+                        .append("line")
+                        .attr("x1", -10)
+                        .attr("x2", 10)
+                        .attr("y1", 0)
+                        .attr("y2", 0)
+                        .style("stroke", "darkgray")
+                        .style("stroke-width", "4px");
+                });
+        });
+    }
+</script>
+
+</html>

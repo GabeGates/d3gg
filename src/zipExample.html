@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+
+    </style>
+
+    <script>
+        $(function () {
+            var availableZips = [
+                "90210",
+                "60606",
+                "89041",
+                "77070"
+            ];
+            $("#tags").autocomplete({
+                source: availableZips,
+                select: function (event, ui) {
+                    // console.log(ui);
+                    // $("#project-icon").attr("src", "https://elandas-lsp-local.s3.us-west-2.amazonaws.com/unprotected/zips/" + ui.item.value + ".jpeg");
+                    $("#project-icon").attr("src", "data/zipExample/" + ui.item.value + ".jpeg");
+
+                    return true;
+                }
+            });
+
+            $('#download').click(function (e) {
+                e.preventDefault();  //stop the browser from following
+                console.log($("#tags").val());
+                // window.location.href = "https://elandas-lsp-local.s3.us-west-2.amazonaws.com/unprotected/zips/" + $("#tags").val() + ".pdf";
+                window.open("data/zipExample/" + $("#tags").val() + ".pdf", '_blank');
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div>
+        <span class="ui-widget">
+            <label for="tags">Zip Codes: </label>
+            <input id="tags">
+        </span>
+        <i id="download" class="fa-solid fa-download"></i>
+        <!-- https://elandas-lsp-local.s3.us-west-2.amazonaws.com/unprotected/zips/60606.jpeg -->
+    </div>
+    <img id="project-icon" src="">
+</body>
+
+</html>

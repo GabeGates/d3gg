@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"
+        integrity="sha512-KK15oKpabNDaLpWinMtNfTqy/V7pzlc2FRG174PfASes7RRx6TAsua8HJdRTKo8+BLvPBKNIkL7kXWcz5HoqqA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"
+        integrity="sha512-HjKxWye8lJGPu5q1u/ZYkHlJrJdm6KGr89E6tOrXeKm1mItb1xusPU8QPcKVhP8F9LjpZT7vsu1Fa+dQywP4eg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+    </style>
+</head>
+
+<body>
+    <div id="viz10">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz9">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz8">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz7">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz6">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz5">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="viz4">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz3">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz2">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="controls"></div>
+
+    <div id="controlsCustom"></div>
+</body>
+
+<script>
+    function wordCloud(dataArg) {
+        var wordScale = d3.scaleLinear().domain([0, 75]).range([10, 120]);
+
+        var randomRotate = d3.scaleLinear().domain([0, 1]).range([-20, 20])
+
+        var keywords = ["layout", "zoom", "circle", "style", "append", "attr"];
+
+        d3.layout.cloud()
+            .size([500, 500])
+            .words(dataArg)
+            // .rotate(0)
+            // .rotate(() => randomRotate(Math.random()))
+            .rotate(d => d.text.length > 5 ? 0 : 90)
+            .fontSize(d => wordScale(d.frequency))
+            .on("end", draw)
+            .start();
+
+        function draw(words) {
+            var wordG = d3.select("#viz10 svg")
+                .append("g")
+                .attr("id", "wordCloudG")
+                .attr("transform", "translate(250,250)");
+
+            wordG.selectAll("text")
+                .data(words)
+                .enter()
+                .append("text")
+                .style("font-size", d => d.size + "px")
+                // .style("fill", "#4F442B")
+                .style("fill", d => keywords.indexOf(d.text) > -1 ? "#FE9922" : "#4F442B")
+                .attr("text-anchor", "middle")
+                .attr("transform", d => {
+                    return `translate(${[d.x, d.y]})rotate(${d.rotate})`
+                })
+                .text(d => d.text);
+        }
+    }
+
+    wordData()
+    function wordData() {
+        d3gg.promiseCSV("data/worddata.csv").then(data => {
+            wordCloud(data);
+        });
+    }
+
+    function sankeyChart(dataArg) {
+
+        var numLayouts = 1;
+        d3.select("#viz9 svg").on("click", runMoreLayouts);
+        function runMoreLayouts() {
+            numLayouts += 20;
+            sankey.iterations(numLayouts);
+
+            d3.selectAll("#viz9 .link")
+                .transition()
+                .duration(500)
+                .attr("d", d3.sankeyLinkHorizontal())
+
+            d3.selectAll(".node")
+                .transition()
+                .duration(500)
+                .attr("transform", d => {
+                    return `translate(${d.x0}, ${d.y0})`
+                });
+
+            data = sankey();
+        }
+
+        var sankey = d3.sankey()
+            .nodeWidth(1) // circle
+            // .nodeWidth(20) // rect
+            .nodePadding(200)
+            .size([460, 460])
+            .nodes(dataArg.nodes)
+            .links(dataArg.links)
+            .linkSort((a, b) => (a.y1 - a.y0) - (b.y1 - b.y0))
+            .iterations(numLayouts);
+
+
+        var data = sankey();
+
+
+        var intensityRamp = d3.scaleLinear()
+            .domain([0, d3.max(data.links, d => d.value)])
+            .range(["#fcd88b", "#cf7d1c"]);
+
+        d3.select("#viz9 svg").append("g")
+            .attr("transform", "translate(20,20)")
+            .attr("id", "sankeyG");
+
+        d3.select("#viz9 #sankeyG").selectAll(".link")
+            .data(data.links)
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d3.sankeyLinkHorizontal())
+            .style("stroke-width", d => Math.max(1, d.width))
+            .style("stroke-opacity", .5)
+            .style("fill", "none")
+            .style("stroke", d => intensityRamp(d.value))
+            // .sort((a, b) => (a.y1 - a.y0) - (b.y1 - b.y0)) // linkSort above
+            .on("mouseover", function () {
+                d3.select(this).style("stroke-opacity", .8);
+            })
+            .on("mouseout", function () {
+                d3.selectAll("#viz9 path.link").style("stroke-opacity", .5);
+            });
+
+        d3.select("#viz9 #sankeyG").selectAll(".node")
+            .data(data.nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => {
+                return `translate(${d.x0}, ${d.y0})`
+            });
+
+        // d3.selectAll("#viz9 .node").append("rect")
+        //     .attr("height", d => d.y1 - d.y0)
+        //     .attr("width", 20)
+        //     .style("fill", "#93c464")
+        //     .style("stroke", "gray");
+
+        d3.selectAll("#viz9 .node").append("circle")
+            .attr("height", d => d.y1 - d.y0)
+            .attr("r", d => (d.y1 - d.y0) / 2)
+            .attr("cy", d => (d.y1 - d.y0) / 2)
+            .style("fill", "#93c464")
+            .style("stroke", "gray");
+
+        d3.selectAll("#viz9 .node")
+            .append("text")
+            .attr("x", 0)
+            .attr("y", d => {
+                return (d.y1 - d.y0) - (d.value + 10)
+            })
+            .attr("text-anchor", "start")
+            .style("fill", "black")
+            .text(d => d.name);
+
+    }
+
+    siteStatsData()
+    function siteStatsData() {
+        d3gg.promiseJSON("data/sitestats.json").then(data => {
+            sankeyChart(data);
+        });
+    }
+
+    function streamGraph01(data) {
+        var xScale = d3.scaleLinear().domain([0, 10]).range([0, 500]);
+        var yScale = d3.scaleLinear().domain([0, 100]).range([500, 0]);
+
+        var movies = ["titanic", "avatar", "akira", "frozen", "deliverance", "avengers"];
+
+        var fillScale = d3.scaleOrdinal()
+            .domain(movies)
+            .range(["#fcd88a", "#cf7c1c", "#93c464", "#75734F", "#5eafc6", "#41a368"])
+
+        var stackLayout = d3.stack()
+            .keys(movies);
+
+        var stackArea = d3.area()
+            .x((d, i) => xScale(i))
+            .y0(d => yScale(d[0]))
+            .y1(d => yScale(d[1]));
+
+        d3.select("#viz6 svg").selectAll("path")
+            .data(stackLayout(data))
+            .enter().append("path")
+            .style("fill", d => fillScale(d.key))
+            .attr("d", d => stackArea(d));
+
+        stackLayout.offset(d3.stackOffsetSilhouette).order(d3.stackOrderInsideOut);
+        stackArea.curve(d3.curveBasis);
+        yScale.domain([-50, 50]);
+
+        d3.select("#viz7 svg").selectAll("path")
+            .data(stackLayout(data))
+            .enter()
+            .append("path")
+            .style("fill", d => fillScale(d.key))
+            .attr("d", d => stackArea(d));
+    }
+
+    function stackedBar(data) {
+        var xScale = d3.scaleLinear().domain([0, 10]).range([0, 500]);
+        var yScale = d3.scaleLinear().domain([0, 60]).range([480, 0]);
+
+        var heightScale = d3.scaleLinear().domain([0, 60]).range([0, 480]);
+
+        var movies = ["titanic", "avatar", "akira", "frozen", "deliverance", "avengers"];
+
+        var fillScale = d3.scaleOrdinal()
+            .domain(movies)
+            .range(["#fcd88a", "#cf7c1c", "#93c464", "#75734F", "#5eafc6", "#41a368"])
+
+
+        var stackLayout = d3.stack()
+            .keys(movies);
+
+        d3.select("#viz8 svg").selectAll("g.bar")
+            .data(stackLayout(data))
+            .enter()
+            .append("g")
+            .attr("class", "bar")
+            .each(function (d) {
+                d3.select(this).selectAll("rect")
+                    .data(d)
+                    .enter()
+                    .append("rect")
+                    .attr("x", (p, q) => xScale(q) + 30)
+                    .attr("y", p => yScale(p[1]))
+                    .attr("height", p => heightScale(p[1] - p[0]))
+                    .attr("width", 40)
+                    .style("fill", fillScale(d.key));
+            });
+    }
+
+    moviesData()
+    function moviesData() {
+        d3gg.promiseCSV("data/movies.csv").then(data => {
+            streamGraph01(data);
+            stackedBar(data);
+        });
+    }
+
+    function histogram(data) {
+        var xScale = d3.scaleLinear().domain([0, 5]).range([0, 500]);
+        var yScale = d3.scaleLinear().domain([0, 10]).range([400, 0]);
+
+        var xAxis = d3.axisBottom().scale(xScale).ticks(6);
+        var histoChart = d3.histogram();
+
+        histoChart
+            .domain([0, 6]) // domain bigger than above to get data in last bar is odd to me...
+            .thresholds([0, 1, 2, 3, 4, 5])
+            .value(d => parseInt(d.favorites));
+
+        var histoData = histoChart(data);
+
+        d3.select("#viz svg")
+            .selectAll("rect")
+            .data(histoData).enter()
+            .append("rect")
+            .attr("x", d => xScale(d.x0))
+            .attr("y", d => yScale(d.length))
+            .attr("width", d => {
+                var xVal = xScale(d.x1 - d.x0) - 2;
+                xVal = xVal < 0 ? 0 : xVal;
+                return xVal;
+            })
+            .attr("height", d => 400 - yScale(d.length))
+            .style("fill", "#FCD88B")
+            .on("click", retweets);
+
+        function retweets() {
+            histoChart.value(d => d.retweets);
+            histoData = histoChart(data);
+            d3.selectAll("#viz rect").data(histoData)
+                .transition().duration(500)
+                .attr("y", d => yScale(d.length))
+                .attr("height", d => 400 - yScale(d.length));
+        }
+
+        d3.select("#viz svg").append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0,400)").call(xAxis);
+
+        d3.select("#viz g.axis").selectAll("text").attr("dx", 50);
+    }
+
+    function histogram2() {
+        var fillScale = d3.scaleOrdinal().range(["#fcd88a", "#cf7c1c", "#93c464"]);
+        var normal = d3.randomNormal();
+        var sampleData1 = d3.range(100).map(d => normal());
+        var sampleData2 = d3.range(100).map(d => normal());
+        var sampleData3 = d3.range(100).map(d => normal());
+
+        var histoChart = d3.histogram();
+
+        histoChart
+            .domain([-3, 3])
+            .thresholds([-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3])
+            .value(d => d)
+
+        var yScale = d3.scaleLinear().domain([-3, 3]).range([400, 0]);
+        var yAxis = d3.axisRight().scale(yScale).tickSize(300);
+        d3.select("#viz2 svg").append("g").call(yAxis);
+
+        var area = d3.area()
+            .x0(d => -d.length)
+            .x1(d => d.length)
+            .y(d => yScale(d.x0))
+            .curve(d3.curveCatmullRom);
+
+        d3.select("#viz2 svg")
+            .selectAll("g.violin")
+            .data([sampleData1, sampleData2, sampleData3])
+            .enter()
+            .append("g")
+            .attr("class", "violin")
+            .attr("transform", (d, i) => `translate(${50 + i * 100}, 0)`)
+            .append("path")
+            .style("stroke", "black")
+            .style("fill", (d, i) => fillScale(i))
+            .attr("d", d => area(histoChart(d)));
+
+    }
+    histogram2();
+
+    tweetData()
+    function tweetData() {
+        d3gg.promiseCSV("data/tweetdata.csv").then(data => {
+            histogram(data);
+
+            var nestedTweets = d3.nest().key(d => d.day).entries(data);
+            nestedTweets.forEach(d => {
+                d.totalActivity = d.tweets + d.retweets + d.favorites;
+            });
+
+            pieChart1(nestedTweets, "#viz4 svg", d => d.key);
+
+            var pieChart = pieChart1(data, "#viz5 svg", d => d.tweets, {
+                innerRadius: 20,
+                dataKey: d => d.key
+            });
+
+
+
+            d3.select("#viz5")
+                .append("button")
+                .on("click", function () {
+                    pieChart.transitionPieCall(d => d.retweets);
+                })
+                .html("Pie Retweets")
+
+        });
+    }
+
+    pieChart1([{ v: 1 }, { v: 1 }, { v: 2 }], "#viz3 svg", d => d.v);
+    function pieChart1(data, selector, pieCall, configArg) {
+        config = configArg || {};
+        var innerRadius = config.innerRadius || 0;
+        var datakey = config.dataKey;
+
+        var pieChart = d3.pie();
+        pieChart.value(pieCall)
+            .sort(null);
+        var yourPie = pieChart(data);
+
+        data.forEach((d, i) => {
+            d.yourSlice = yourPie[i]
+        });
+
+        var newArc = d3.arc();
+        newArc.innerRadius(innerRadius).outerRadius(100);
+
+        var fillScale = d3.scaleOrdinal().range(["#fcd88a", "#cf7c1c", "#93c464", "#75734F"]);
+
+        var pathSelect = d3.select(selector)
+            .append("g")
+            .attr("transform", "translate(250,250)")
+            .selectAll("path");
+
+        var dataSelect;
+        if (datakey) {
+            dataSelect = pathSelect.data(data, datakey);
+        } else {
+            dataSelect = pathSelect.data(data);
+        }
+
+        dataSelect.enter()
+            .append("path")
+            .attr("d", d => newArc(d.yourSlice))
+            .style("fill", (d, i) => fillScale(i))
+            .style("stroke", "black")
+            .style("stroke-width", "2px");
+
+        return {
+            chart: pieChart,
+            transitionPieCall: function (newPieCall) {
+                pieChart.value(d => d.retweets);
+
+                var newPie = pieChart(data);
+
+                data.forEach((d, i) => {
+                    d.newSlice = newPie[i]
+                });
+
+                d3.selectAll(`${selector} path`)
+                    .transition().duration(1000)
+                    .attrTween("d", arcTween);
+
+                function arcTween(d) {
+                    return t => {
+                        var interpolateStartAngle = d3.interpolate(d.yourSlice.startAngle, d.newSlice.startAngle);
+                        var interpolateEndAngle = d3.interpolate(d.yourSlice.endAngle, d.newSlice.endAngle);
+
+                        d.startAngle = interpolateStartAngle(t);
+                        d.endAngle = interpolateEndAngle(t);
+                        return newArc(d);
+                    }
+                }
+            }
+        }
+    }
+</script>
+
+</html>

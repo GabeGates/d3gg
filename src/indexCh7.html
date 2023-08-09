@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+        .grid {
+            stroke: #9A8B7A;
+            stroke-width: 1px;
+            fill: #CF7D1C;
+        }
+
+        .arc {
+            stroke: #9A8B7A;
+            fill: none;
+        }
+
+        .node {
+            fill: #EBD8C1;
+            stroke: #9A8B7A;
+            stroke-width: 1px;
+
+        }
+
+        circle.active {
+            stroke: #FE9922;
+        }
+
+        path.active {
+            stroke: #FE9922;
+        }
+
+        circle.source {
+            fill: #93C464;
+        }
+
+        circle.target {
+            fill: #41A368;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="viz04">
+        <svg class="svg001 svg500"></svg>
+        <div id="controls"></div>
+    </div>
+
+    <div id="viz03">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz02">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="controls"></div>
+
+    <div id="controlsCustom"></div>
+</body>
+
+<script>
+
+    function createAdjacencyMatrix(nodes, edges) {
+        var edgeHash = [];
+        edges.forEach(edge => {
+            var id = edge.source + "-" + edge.target;
+            edgeHash[id] = edge;
+        });
+
+        var matrix = [];
+        nodes.forEach((source, a) => {
+            nodes.forEach((target, b) => {
+                var grid = {
+                    id: source.id + "-" + target.id,
+                    x: b,
+                    y: a,
+                    weight: 0
+                };
+
+                if (edgeHash[grid.id]) {
+                    grid.weight = parseInt(edgeHash[grid.id].weight);
+                }
+
+                matrix.push(grid);
+            });
+        });
+
+
+        d3.select("#viz svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .attr("id", "adjacencyG")
+            .selectAll("rect")
+            .data(matrix)
+            .enter()
+            .append("rect")
+            .attr("class", "grid")
+            .attr("width", 50)
+            .attr("height", 50)
+            .attr("x", d => d.x * 50)
+            .attr("y", d => d.y * 50)
+            .style("fill-opacity", d => d.weight * .2);
+
+        d3.select("#viz svg")
+            .append("g")
+            .attr("transform", "translate(50,45)")
+            .selectAll("text")
+            .data(nodes)
+            .enter()
+            .append("text")
+            .attr("x", (d, i) => i * 50 + 25)
+            .text(d => d.id)
+            .style("text-anchor", "middle");
+
+        d3.select("#viz svg")
+            .append("g")
+            .attr("transform", "translate(45,50)")
+            .selectAll("text")
+            .data(nodes)
+            .enter()
+            .append("text")
+            .attr("y", (d, i) => i * 50 + 25)
+            .text(d => d.id)
+            .style("text-anchor", "end");
+
+        d3.selectAll("rect.grid")
+            .on("mouseover", gridOver);
+
+        function gridOver(d) {
+            d3.selectAll("rect")
+                .style("stroke-width", p => p.x == d.x || p.y == d.y ? "4px" : "1px");
+        }
+
+
+    }
+
+
+    function createArcDiagram(nodes, edges) {
+        var nodeHash = {};
+
+        nodes.forEach((node, x) => {
+            nodeHash[node.id] = node;
+            node.x = parseInt(x) * 30;
+        });
+
+        edges.forEach(edge => {
+            edge.weight = parseInt(edge.weight);
+            edge.source = nodeHash[edge.source];
+            edge.target = nodeHash[edge.target];
+        });
+
+        var arcG = d3.select("#viz02 svg")
+            .append("g")
+            .attr("id", "arcG")
+            .attr("transform", "translate(50,250)");
+
+        arcG.selectAll("path")
+            .data(edges)
+            .enter()
+            .append("path")
+            .attr("class", "arc")
+            .style("stroke-width", d => d.weight * 2)
+            .style("opacity", .25)
+            .attr("d", arc)
+            .on("mouseover", edgeOver);
+
+        arcG.selectAll("circle")
+            .data(nodes)
+            .enter()
+            .append("circle")
+            .attr("class", "node")
+            .attr("r", 10)
+            .attr("cx", d => d.x)
+            .on("mouseover", nodeOver);
+
+        function nodeOver(d) {
+            d3.selectAll("#viz02 circle")
+                .classed("active", p => p === d);
+
+            d3.selectAll("#viz02 path")
+                .classed("active", p => p.source === d || p.target === d);
+        }
+
+        function edgeOver(d) {
+            d3.selectAll("#viz02 path")
+                .classed("active", p => p === d);
+
+            d3.selectAll("#viz02 circle")
+                .classed("source", p => p === d.source)
+                .classed("target", p => p === d.target);
+        }
+
+        function arc(d, i) {
+            var draw = d3.line().curve(d3.curveBasis);
+            var midX = (d.source.x + d.target.x) / 2;
+            var midY = (d.source.x - d.target.x);
+
+            return draw([[d.source.x, 0], [midX, midY], [d.target.x, 0]]);
+
+        }
+
+    }
+
+    function forceSimRandom() {
+        var roleScale = d3.scaleOrdinal()
+            .range(["#75739F", "#41A368", "#FE9922"]);
+
+        var sampleData = d3.range(300).map((d, i) => ({ r: 2, value: 200 + d3.randomNormal()() * 50 }));
+        var manyBody = d3.forceManyBody()
+            .strength(10);
+
+        var center = d3.forceCenter()
+            .x(250).y(250);
+
+        var force = d3.forceSimulation()
+            // .force("charge", manyBody)
+            // .force("center", center)
+            // .force("collision", d3.forceCollide(d => d.r))
+            .force("collision", d3.forceCollide(d => d.r))
+            .force("x", d3.forceX(100))
+            .force("y", d3.forceY(d => d.value).strength(3))
+            .nodes(sampleData)
+            .on("tick", updateNetwork);
+
+        d3.select("#viz03 svg")
+            .selectAll("circle")
+            .data(sampleData)
+            .enter()
+            .append("circle")
+            .style("fill", (d, i) => roleScale(i))
+            .attr("r", d => d.r);
+
+        function updateNetwork() {
+            d3.selectAll("#viz03 circle")
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        }
+
+    }
+    forceSimRandom();
+
+    function forceSimData(nodes, edges) {
+        var roleScale = d3.scaleOrdinal()
+            .domain(["contractor", "employee", "manager"])
+            .range(["#75739F", "#41A368", "#FE9922"]);
+
+
+        var nodeHash = nodes.reduce((hash, node) => {
+            hash[node.id] = node;
+            return hash;
+        }, {});
+
+        edges.forEach(edge => {
+            edge.weight = parseInt(edge.weight);
+            edge.source = nodeHash[edge.source];
+            edge.target = nodeHash[edge.target];
+        });
+
+        nodes.forEach(node => {
+            node.degreeCentrality = edges.filter(edge => edge.source === node || edge.target === node).length;
+        });
+
+        d3.select("#viz04 #controls")
+            .append("button")
+            .on("click", sizeByDegree)
+            .html("Degree Size");
+
+        function sizeByDegree() {
+            simulation.stop();
+            simulation.force("charge", d3.forceManyBody().strength(d => -d.degreeCentrality * 20))
+            simulation.restart();
+
+            d3.selectAll("circle")
+                .attr("r", d => d.degreeCentrality * 2);
+        }
+
+        var linkForce = d3.forceLink().strength(d => d.weight * .1);
+
+        var simulation = d3.forceSimulation()
+            // .force("charge", d3.forceManyBody().strength(-40))
+            // .force("center", d3.forceCenter().x(300).y(300))
+            .force("charge", d3.forceManyBody().strength(-500))
+            .force("x", d3.forceX(250))
+            .force("y", d3.forceY(250))
+            .force("link", linkForce)
+            .nodes(nodes)
+            .on("tick", forceTick);
+
+        simulation.force("link").links(edges);
+
+        d3.select("#viz04 svg")
+            .selectAll("line.link")
+            .data(edges, d => `${d.source.id}-${d.target.id}`)
+            .enter()
+            .append("line")
+            .attr("class", "link")
+            .style("opacity", .5)
+            .attr("stroke-width", d => d.weight)
+            .attr("stroke", "#41A368");
+
+        var nodeEnter = d3.select("#viz04 svg")
+            .selectAll("g.node")
+            .data(nodes, d => d.id)
+            .enter()
+            .append("g")
+            .attr("class", "node");
+
+        nodeEnter.append("circle")
+            .attr("r", 5)
+            .style("fill", d => roleScale(d.role))
+
+        nodeEnter.append("text")
+            .style("text-anchor", "middle")
+            .attr("y", 15)
+            .text(d => d.id);
+
+
+        var marker = d3.select("#viz04 svg")
+            .append("defs")
+            .append("marker")
+            .attr("id", "triangle")
+            .attr("refX", 12)
+            .attr("refY", 6)
+            .attr("markerUnits", "userSpaceOnUse")
+            .attr("markerWidth", 12)
+            .attr("markerHeight", 18)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M 0 0 12 6 0 12 3 6");
+
+        d3.selectAll("line").attr("marker-end", "url(#triangle)")
+
+
+        function forceTick() {
+            d3.selectAll("#viz04 line.link")
+                .attr("x1", d => d.source.x)
+                .attr("x2", d => d.target.x)
+                .attr("y1", d => d.source.y)
+                .attr("y2", d => d.target.y);
+
+
+            d3.selectAll("#viz04 g.node")
+                .attr("transform", d => `translate(${d.x}, ${d.y})`);
+        }
+
+        var drag = d3.drag();
+        drag.on("drag", dragging);
+
+        function dragging(d) {
+            var e = d3.event;
+            d.fx = e.x;
+            d.fy = e.y;
+
+            if (simulation.alpha() < 0.1) {
+                simulation.alpha(0.1);
+                simulation.restart();
+            }
+        }
+
+        d3.selectAll("g.node").call(drag);
+
+
+
+        d3.select("#viz04 #controls")
+            .append("button")
+            .on("click", filterNetwork)
+            .html("Filter Network");
+
+        function filterNetwork() {
+            simulation.stop();
+            var originalNodes = simulation.nodes();
+            var originalLinks = simulation.force("link").links();
+
+            var influentialNodes = originalNodes.filter(d => d.role === "employee");
+            var influentialLinks = originalLinks.filter(d => influentialNodes.includes(d.source) && influentialNodes.includes(d.target));
+
+            d3.selectAll("#voz04 g.node")
+                .data(influentialNodes, d => d.id)
+                .exit()
+                .transition()
+                .duration(4000)
+                .style("opacity", 0)
+                .remove();
+
+            d3.selectAll("line.link")
+                .data(influentialLinks, d => `${d.source.id}-${d.target.id}`)
+                .exit()
+                .transition()
+                .duration(3000)
+                .style("opacity", 0)
+                .remove();
+
+            simulation.nodes(influentialNodes);
+            simulation.force("link").links(influentialLinks);
+            simulation.alpha(0.1);
+            simulation.restart();
+
+        }
+
+
+        d3.select("#viz04 #controls")
+            .append("button")
+            .on("click", addEdge)
+            .html("Add Edge");
+
+        function addEdge() {
+            simulation.stop()
+            var links = simulation.force("link").links();
+            var nodes = simulation.nodes();
+            var newEdge = { source: nodes[0], target: nodes[8], weight: 5 }
+            links.push(newEdge);
+            simulation.force("link").links(links);
+
+            d3.select("#viz04 svg")
+                .selectAll("line.link")
+                .data(links, d => `${d.source.id}-${d.target.id}`)
+                .enter()
+                .insert("line", "g.node")
+                .attr("class", "link")
+                .style("stroke", "#FE9922")
+                .style("stroke-width", 5)
+
+            simulation.alpha(0.1)
+            simulation.restart();
+        }
+
+
+        d3.select("#viz04 #controls")
+            .append("button")
+            .on("click", addNodesAndEdges)
+            .html("Add Nodes & Edges");
+
+        function addNodesAndEdges() {
+            simulation.stop();
+            var oldEdges = simulation.force("link").links();
+            var oldNodes = simulation.nodes();
+            var newNode1 = { id: "Mike", role: "contractor", team: "none" }
+            var newNode2 = { id: "Noah", role: "contractor", team: "none" }
+
+            var newEdge1 = { source: oldNodes[5], target: newNode1, weight: 5 };
+            var newEdge2 = { source: oldNodes[5], target: newNode2, weight: 5 };
+
+            oldEdges.push(newEdge1, newEdge2)
+            oldNodes.push(newNode1, newNode2)
+
+            simulation.force("link").links(oldEdges);
+            simulation.nodes(oldNodes);
+
+            d3.select("#viz04 svg")
+                .selectAll("line.link")
+                .data(oldEdges, d => d.source.id + "-" + d.target.id)
+                .enter()
+                .insert("line", "g.node")
+                .attr("class", "link")
+                .style("stroke", "#FE9922")
+                .style("stroke-width", 5)
+
+            var nodeEnter = d3.select("#viz04 svg")
+                .selectAll("g.node")
+                .data(oldNodes, d => d.id)
+                .enter()
+                .append("g")
+                .attr("class", "node")
+
+            nodeEnter.append("circle")
+                .attr("r", 5)
+                .style("fill", "#FCBC34");
+
+            nodeEnter.append("text")
+                .style("text-anchor", "middle")
+                .attr("y", 15)
+                .text(d => d.id)
+
+            simulation.alpha(0.1);
+            simulation.restart();
+
+
+        }
+
+
+
+        d3.select("#viz04 #controls")
+            .append("button")
+            .on("click", manuallyPositionNodes)
+            .html("Manually Position Nodes");
+
+        function manuallyPositionNodes() {
+            var xExtent = d3.extent(simulation.nodes(), d => parseInt(d.degreeCentrality));
+            var yExtent = d3.extent(simulation.nodes(), d => parseInt(d.salary));
+
+            var xScale = d3.scaleLinear().domain(xExtent).range([50, 450]);
+            var yScale = d3.scaleLinear().domain(yExtent).range([450, 50]);
+
+            simulation.stop();
+
+            d3.selectAll("g.node")
+                .transition()
+                .duration(1000)
+                .attr("transform", d => `translate(${xScale(d.degreeCentrality)},${yScale(d.salary)})`);
+
+            d3.selectAll("line.link")
+                .transition()
+                .duration(1000)
+                .attr("x1", d => xScale(d.source.degreeCentrality))
+                .attr("y1", d => yScale(d.source.salary))
+                .attr("x2", d => xScale(d.target.degreeCentrality))
+                .attr("y2", d => yScale(d.target.salary));
+
+            var xAxis = d3.axisBottom().scale(xScale).tickSize(4);
+            var yAxis = d3.axisRight().scale(yScale).tickSize(4);
+
+            d3.select("#viz04 svg")
+                .append("g")
+                .attr("transform", "translate(0,460)")
+                .call(xAxis);
+
+            d3.select("#viz04 svg")
+                .append("g")
+                .attr("transform", "translate(460,0)")
+                .call(yAxis);
+
+            d3.selectAll("g.node").each(d => {
+                d.x = xScale(d.degreeCentrality);
+                d.vx = 0;
+                d.y = yScale(d.salary);
+                d.vy = 0;
+            })
+
+        }
+    }
+
+    networkData()
+    function networkData() {
+        var promises = [
+            d3gg.promiseCSV("data/nodelist.csv"),
+            d3gg.promiseCSV("data/edgelist.csv")
+        ];
+
+        Promise.all(promises).then(function (responses) {
+            let nodes = JSON.stringify(responses[0]);
+            let edges = JSON.stringify(responses[1]);
+
+            createAdjacencyMatrix(JSON.parse(nodes), JSON.parse(edges));
+
+
+            createArcDiagram(JSON.parse(nodes), JSON.parse(edges));
+
+
+            forceSimData(JSON.parse(nodes), JSON.parse(edges));
+        })
+    }
+
+</script>
+
+</html>

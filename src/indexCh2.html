@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+
+    <script src="./d3gg.js"></script>
+</head>
+
+<body>
+    <div id="vizcontainer">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer2">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer3">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer4">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer5">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer6">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+    <div id="vizcontainer7">
+        <svg class="svg001 svg500">
+
+        </svg>
+    </div>
+</body>
+
+<script>
+    try {
+        d3gg.chart.bar();
+    } catch (err) {
+        console.warn("d3gg.chart.bar() no config validation worked!", err)
+    }
+
+    d3gg.chart.bar({
+        selector: "#vizcontainer svg",
+        data: [15, 20, 22, 8, 100, 10]
+    });
+
+    d3gg.chart.barStacked({
+        selector: "#vizcontainer2 svg",
+        data: [
+            [15, 20, 22, 8, 100, 10],
+            [25, 10, 32, 68, 12, 40],
+            [45, 30, 2, 23, 57, 20]
+        ]
+    });
+
+
+    d3gg.chart.bar({
+        selector: "#vizcontainer3 svg",
+        data: [14, 68, 24500, 430, 19, 1000, 5555],
+        scalePolylinear: true
+    });
+
+    var clampedScale = d3.scaleLinear().domain([0, 5000]).range([0, 100]).clamp(true);
+    d3gg.chart.bar({
+        selector: "#vizcontainer4 svg",
+        data: [14, 68, 24500, 430, 19, 1000, 5555],
+        scale: clampedScale
+    });
+
+    // Scale a range of colors for population to infer coverage status for J&J 
+    var coloramp = d3.scaleLinear().domain([500000, 13000000]).range(["blue", "red"]);
+    coloramp(1000000);
+    coloramp(9000000);
+
+    var sampleArray = [423, 124, 66, 424, 58, 10, 900, 44, 1];
+    var qScale = d3.scaleQuantile().domain(sampleArray).range([0, 1, 2]);
+    qScale(423);
+    qScale(20);
+    qScale(10000);
+
+    d3gg.promiseCbsaData().then(data => {
+        let dataSlice = data.slice(0, 25);
+        console.log('CBSA:then', dataSlice.length, dataSlice)
+        let minPop = d3.min(dataSlice, el => d3gg.numberFormatter(el.Population));
+        let maxPop = d3.max(dataSlice, el => d3gg.numberFormatter(el.Population));
+        let meanPop = d3.mean(dataSlice, el => d3gg.numberFormatter(el.Population));
+        let extentPop = d3.extent(dataSlice, el => d3gg.numberFormatter(el.Population));
+
+        console.log(`Min: ${minPop}, Max: ${maxPop}, Mean: ${meanPop}, Extent: ${extentPop}`);
+
+
+        d3gg.chart.bar({
+            selector: "#vizcontainer5 svg",
+            data: dataSlice,
+            height: d => d3gg.numberFormatter(d.Population)
+        });
+
+        d3.select("body").selectAll("div.cities").data(dataSlice).enter().append("div").attr("class", "cities").html(d => d['CBSA Name']);
+
+    });
+
+    d3gg.promiseTerrRosterData().then(data => {
+        console.log('TerrRoster:then', data.length, data[0])
+        let unique = {};
+        data.forEach(d => {
+            d.time = new Date(d["HIRE_DATE"])
+            d.impact = parseInt(d["COMPANY_ID"])
+            unique[d.impact] = "";
+        });
+
+        console.log("cID", unique);
+        var nestedOrgs = d3.nest().key(d => d.ORG_CODE).entries(data);
+        console.log("TerrRoster:Nested ORGS", nestedOrgs[0]);
+
+        nestedOrgs.forEach(d => { d.length = d.values.length });
+
+
+        d3gg.chart.bar({
+            selector: "#vizcontainer6 svg",
+            data: nestedOrgs,
+            height: d => d.length,
+            label: d => d.key,
+            bindingKey: d => d.key
+        });
+
+        let dataSlice = data.slice(0, 25);
+        let scatterPlot = d3gg.chart.scatterPlot({
+            selector: "#vizcontainer7 svg",
+            data: dataSlice,
+            label: d => d["FIRST_NAME"],
+            bindingKey: d => d["#WWID"]
+        });
+
+        // Filter existing chart removing non-matching items 
+        dataSlice = dataSlice.filter(d => d["COMPANY_ID"] === "200");
+        d3.select("#vizcontainer7 svg")
+            .selectAll("g").data(dataSlice, d => d["#WWID"]).exit().remove();
+    });
+</script>
+
+</html>

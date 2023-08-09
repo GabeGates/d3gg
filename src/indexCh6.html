@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+    </style>
+</head>
+
+<body>
+
+    <div id="viz08">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz07">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz06">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz05">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz04">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz03">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz02">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+    </div>
+
+    <div id="controls"></div>
+
+    <div id="controlsCustom"></div>
+</body>
+
+<script>
+    function dendroGramRadial(dataArg) {
+        var data = dataArg.filter(d => d['COMPANY_ID'] == '101');
+
+        function project(x, y) {
+            var angle = x / 90 * Math.PI;
+            var radius = y;
+            return [radius * Math.cos(angle), radius * Math.sin(angle)];
+        }
+
+
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(() => 1); // Weighted value for size of lowest node
+
+        var treeChart = d3.tree();
+        treeChart.size([470, 470]);
+
+        var treeData = treeChart(root).descendants();
+
+        d3.select("#viz04 svg")
+            .append("g")
+            .attr("id", "treeG")
+            .attr("transform", "translate(500,500)")
+            .selectAll("g")
+            .data(treeData)
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            // For radial we use our projection
+            .attr("transform", d => `translate(${project(d.x, d.y)})`);
+
+        d3.selectAll("#viz04 g.node")
+            .append("circle")
+            .attr("r", 10)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "white")
+            .style("stroke-width", "2px")
+
+        d3.select("#viz04 #treeG").selectAll("line")
+            .data(treeData.filter(d => d.parent))
+            .enter()
+            .insert("line", "g")
+            // For horizontal we flip x/y values
+            .attr("x1", d => project(d.parent.x, d.parent.y)[0])
+            .attr("y1", d => project(d.parent.x, d.parent.y)[1])
+            .attr("x2", d => project(d.x, d.y)[0])
+            .attr("y2", d => project(d.x, d.y)[1])
+            .style("stroke", "black")
+
+        d3.selectAll("#viz04 g.node")
+            .append("text")
+            .style("text-anchor", "middle")
+            .style("fill", "#4f442b")
+            .text(d => {
+                return d.data.id || d.data.key || d.data['TERRITORY_CODE']
+            })
+
+        var treeZoom = d3.zoom();
+        treeZoom.on("zoom", zoomed);
+        d3.select("#viz04 svg").call(treeZoom)
+
+        function zoomed() {
+            d3.select("#viz04 #treeG")
+                .attr("transform", `translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
+        }
+
+    }
+
+    function dendroGramHorizontal(dataArg) {
+        var data = dataArg.filter(d => d['COMPANY_ID'] == '101');
+
+
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(() => 1); // Weighted value for size of lowest node
+
+        var treeChart = d3.tree();
+        treeChart.size([4900, 900]);
+
+        var treeData = treeChart(root).descendants();
+
+        d3.select("#viz03 svg")
+            .append("g")
+            .attr("id", "treeG")
+            .attr("transform", "translate(60,20)")
+            .selectAll("g")
+            .data(treeData)
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            // For horizontal we flip x/y values
+            .attr("transform", d => `translate(${d.y}, ${d.x})`);
+
+        d3.selectAll("#viz03 g.node")
+            .append("circle")
+            .attr("r", 10)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "white")
+            .style("stroke-width", "2px")
+
+        d3.select("#viz03 #treeG").selectAll("line")
+            .data(treeData.filter(d => d.parent))
+            .enter()
+            .insert("line", "g")
+            // For horizontal we flip x/y values
+            .attr("x1", d => d.parent.y)
+            .attr("y1", d => d.parent.x)
+            .attr("x2", d => d.y)
+            .attr("y2", d => d.x)
+            .style("stroke", "black")
+
+        d3.selectAll("#viz03 g.node")
+            .append("text")
+            .style("text-anchor", "middle")
+            .style("fill", "#4f442b")
+            .text(d => {
+                return d.data.id || d.data.key || d.data['TERRITORY_CODE']
+            })
+
+        var treeZoom = d3.zoom();
+        treeZoom.on("zoom", zoomed);
+        d3.select("#viz03 svg").call(treeZoom)
+
+        function zoomed() {
+            d3.select("#viz03 #treeG")
+                .attr("transform", `translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
+        }
+
+    }
+
+    function dendroGram(dataArg) {
+        var data = dataArg.filter(d => d['COMPANY_ID'] == '101');
+
+        console.log('filtered 101', data);
+
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(() => 1); // Weighted value for size of lowest node
+
+        var treeChart = d3.tree();
+        treeChart.size([500, 500]);
+
+        var treeData = treeChart(root).descendants();
+
+        d3.select("#viz02 svg")
+            .append("g")
+            .attr("id", "treeG")
+            .attr("transform", "translate(60,20)")
+            .selectAll("g")
+            .data(treeData)
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+        d3.selectAll("#viz02 g.node")
+            .append("circle")
+            .attr("r", 10)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "white")
+            .style("stroke-width", "2px")
+
+        d3.select("#viz02 #treeG").selectAll("line")
+            .data(treeData.filter(d => d.parent))
+            .enter()
+            .insert("line", "g")
+            .attr("x1", d => d.parent.x)
+            .attr("y1", d => d.parent.y)
+            .attr("x2", d => d.x)
+            .attr("y2", d => d.y)
+            .style("stroke", "black")
+
+        d3.selectAll("#viz02 g.node")
+            .append("text")
+            .style("text-anchor", "middle")
+            .style("fill", "#4f442b")
+            .text(d => d.data.id || d.data.key || d.data['TERRITORY_CODE'])
+
+    }
+
+    function circlePacking(data) {
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        // PARENT_TERRITORY_CODE
+        // COMPANY_ID
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['COMPANY_ID'])
+            .entries(data);
+
+        console.log("nested", nestedParentTerrs);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+
+        var packChart = d3.pack();
+        packChart.size([900, 900]);
+        packChart.padding(10);
+
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(d => parseInt(d['REGION_CODE'])); // Weighted value for size of lowest node
+
+        d3.select("#viz svg")
+            .append("g")
+            .attr("transform", "translate(100,20)")
+            .selectAll("circle")
+            .data(packChart(root).descendants())
+            .enter()
+            .append("circle")
+            .attr("r", d => d.r)
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "black");
+
+    }
+
+    function icicleChart(data) {
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        // PARENT_TERRITORY_CODE
+        // COMPANY_ID
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        console.log("nested", nestedParentTerrs);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+
+        var packChart = d3.pack();
+        packChart.size([900, 900]);
+        packChart.padding(10);
+
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(d => parseInt(d['REGION_CODE'])); // Weighted value for size of lowest node
+
+        var partitionLayout = d3.partition().size([800, 300]);
+
+        partitionLayout(root);
+
+        d3.select("#viz05 svg")
+            .selectAll("rect")
+            .data(root.descendants())
+            .enter()
+            .append("rect")
+            .attr("x", d => d.x0)
+            .attr("y", d => d.y0)
+            .attr("width", d => d.x1 - d.x0)
+            .attr("height", d => d.y1 - d.y0)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "black");
+
+    }
+
+    function sunburstChart(data) {
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        // PARENT_TERRITORY_CODE
+        // COMPANY_ID
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        console.log("nested", nestedParentTerrs);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+
+        var packChart = d3.pack();
+        packChart.size([900, 900]);
+        packChart.padding(10);
+
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            .sum(d => parseInt(d['REGION_CODE'])); // Weighted value for size of lowest node
+
+        var partitionLayout = d3.partition().size([2 * Math.PI, 250]);
+
+        partitionLayout(root);
+
+        var arc = d3.arc()
+            .innerRadius(d => d.y0)
+            .outerRadius(d => d.y1);
+
+        d3.select("#viz06 svg")
+            .append("g")
+            .attr("transform", "translate(255,255)")
+            .selectAll("path")
+            .data(root.descendants())
+            .enter()
+            .append("path")
+            .attr("d", ({ y0, y1, x0, x1 }) => arc({ y0, y1, startAngle: x0, endAngle: x1 }))
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "black");
+
+    }
+
+    function treeMap(data) {
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        // PARENT_TERRITORY_CODE
+        // COMPANY_ID
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            // .sum(() => 1); // Weighted value for size of lowest node
+            .sum(d => parseInt(d['REGION_CODE'])); // Weighted value for size of lowest node
+
+        var treemapLayout = d3.treemap()
+            .size([800, 800])
+            .padding(d => (d.depth * 1) + 5);
+
+        treemapLayout(root);
+        // d.data.id || d.data.key || d.data['TERRITORY_CODE']
+        d3.select("#viz07 svg")
+            .selectAll("rect")
+            .data(root.descendants(), d => d.data['TERRITORY_CODE'] || d.data.key || d.data.id)
+            .enter()
+            .append("rect")
+            .attr("x", d => d.x0)
+            .attr("y", d => d.y0)
+            .attr("width", d => d.x1 - d.x0)
+            .attr("height", d => d.y1 - d.y0)
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "black")
+            .on("click", filterTreemap);
+
+        function filterTreemap(d) {
+            var newRoot = d3.hierarchy(d.data, p => p.values)
+                .sum(p => parseInt(p['REGION_CODE'])); // Weighted value for size of lowest node
+
+            treemapLayout(newRoot);
+
+            d3.select("#viz07 svg")
+                .selectAll("rect")
+                .data(newRoot.descendants(), p => p.data['TERRITORY_CODE'] || p.data.key || p.data.id)
+                .enter()
+                .append("rect")
+                .style("fill", p => depthScale(p.depth))
+                .style("stroke", "black");
+
+            d3.select("#viz07 svg")
+                .selectAll("rect")
+                .data(newRoot.descendants(), p => p.data['TERRITORY_CODE'] || p.data.key || p.data.id)
+                .exit()
+                .remove();
+
+
+            d3.select("#viz07 svg")
+                .selectAll("rect")
+                .on("click", d === root ? p => filterTreemap(p) : () => filterTreemap(root))
+                .transition()
+                .duration(1000)
+                .attr("x", p => p.x0)
+                .attr("y", p => p.y0)
+                .attr("width", p => p.x1 - p.x0)
+                .attr("height", p => p.y1 - p.y0);
+        }
+    }
+
+    function treeMapRadial(data) {
+        var depthScale = d3.scaleOrdinal()
+            .range(["#5EAFC6", "#FE9922", "#93c464", "#75739F"]);
+
+        // PARENT_TERRITORY_CODE
+        // COMPANY_ID
+
+        var nestedParentTerrs = d3.nest()
+            .key(d => d['PARENT_TERRITORY_CODE'])
+            .entries(data);
+
+        var packableTerrs = { id: "All Terrs", values: nestedParentTerrs }
+
+        var root = d3
+            .hierarchy(packableTerrs, d => d.values)
+            // .sum(() => 1); // Weighted value for size of lowest node
+            .sum(d => parseInt(d['REGION_CODE'])); // Weighted value for size of lowest node
+
+        var treemapLayout = d3.treemap()
+            .size([400, 400])
+            .padding(d => (d.depth * 1) + 5);
+
+        treemapLayout(root);
+
+        var arc = d3.arc()
+            .innerRadius(d => d.y0)
+            .outerRadius(d => d.y1);
+
+        d3.select("#viz08 svg")
+            .append("g")
+            .attr("transform", "translate(500,500)")
+            .selectAll("path")
+            .data(root.descendants(), d => d.data['TERRITORY_CODE'] || d.data.key || d.data.id)
+            .enter()
+            .append("path")
+            .attr("d", ({ y0, y1, x0, x1 }) => arc({ y0, y1, startAngle: x0, endAngle: x1 }))
+            .style("fill", d => depthScale(d.depth))
+            .style("stroke", "black");
+    }
+
+    terrData()
+    function terrData() {
+        d3gg.promisePSV("data/terrRoster.txt").then(dataArg => {
+            var data = dataArg.filter((d, i) => i < 500);
+            console.log('terrRoster', data[10]);
+            circlePacking(data);
+
+            dendroGram(data);
+
+            dendroGramHorizontal(data);
+
+            dendroGramRadial(data);
+
+            icicleChart(data);
+
+            sunburstChart(data);
+
+            treeMap(data);
+
+            treeMapRadial(data);
+        });
+    }
+
+</script>
+
+</html>

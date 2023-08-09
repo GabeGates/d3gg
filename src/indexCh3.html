@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+        text {
+            font-size: 10px;
+            text-anchor: middle;
+            fill: #4f442b;
+        }
+
+        g>text.active {
+            font-size: 30px;
+        }
+
+        circle {
+            fill: #75739F;
+            stroke: black;
+            stroke-width: 1px;
+        }
+
+        circle.active {
+            fill: #FE9922;
+        }
+
+        circle.inactive {
+            fill: #C4B9AC;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="viz">
+        <svg class="svg001 svg500"></svg>
+    </div>
+
+    <div id="controls"></div>
+
+    <div id="controlsCustom"></div>
+</body>
+
+<script>
+    var teamColor = d3.rgb("red");
+
+    d3gg.promiseTerrRosterData().then(data => {
+        console.log('TerrRoster:then', data.length, data[0])
+
+        data.forEach(d => {
+            d.time = new Date(d["HIRE_DATE"])
+            d.impact = parseInt(d["COMPANY_ID"])
+        });
+
+        var nestedOrgs = d3.nest().key(d => d.ORG_CODE).entries(data);
+        console.log("TerrRoster:Nested ORGS", nestedOrgs[0]);
+
+        nestedOrgs.forEach(d => {
+            d.length = d.values.length
+            d.companyId = parseInt(d.values[0]["COMPANY_ID"])
+        });
+
+        d3.select("#viz svg")
+            .append("g")
+            .attr("id", "teamsG")
+            .attr("transform", "translate(50,300)")
+            .selectAll("g")
+            .data(nestedOrgs)
+            .enter()
+            .append("g")
+            .attr("class", "overallG")
+            .attr("transform", (d, i) => "translate(" + (i * 50) + ", 0)");
+
+        var teamG = d3.selectAll("g.overallG");
+
+        teamG
+            .append("circle").attr("r", 0)
+            .transition()
+            .delay((d, i) => i * 100)
+            .duration(500)
+            .attr("r", 40)
+            .transition()
+            .duration(500)
+            .attr("r", 20);
+
+        teamG
+            .append("text")
+            .attr("y", "30")
+            .text(d => d.key)
+            .style("pointer-events", "none");
+
+        teamG
+            .on("mouseover", function (d) {
+                d3.select(this).select("text").classed("active", true).attr("y", 10);
+
+                d3.selectAll("g.overallG").select("circle")
+                    .style("fill", function (p) {
+                        if (p.companyId === d.companyId) {
+                            return teamColor.darker(.75);
+                        } else {
+                            return teamColor.brighter(.5);
+                        }
+                    })
+                // .each(function (p) {
+                //     if (p.companyId === d.companyId) {
+                //         d3.select(this).classed("active", true);
+                //     } else {
+                //         d3.select(this).classed("inactive", true);
+                //     }
+                // });
+
+                d3.select(this).raise(); // this.parentElement.appendChild(this);
+            })
+            .on("mouseout", d => {
+                d3.selectAll("g.overallG").select("circle").classed("active", false).classed("inactive", false).style("fill", "");
+
+                d3.selectAll("g.overallG").select("text").classed("active", false).attr("y", 30);
+            })
+
+        teamG.insert("image", "text")
+            .attr("xlink:href", d => `images/${d.companyId}.png`)
+            .attr("width", "45px").attr("height", "20px").attr("x", -22).attr("y", -10)
+            .on("error", function () {
+                d3.select(this).attr("xlink:href", `images/default.png`)
+            })
+
+        const dataKeys = Object.keys(nestedOrgs[0]).filter(d => d === "length" || d === "impact");
+        console.log("dataKeys", dataKeys);
+
+        d3.select("#controls").selectAll("button.teams")
+            .data(dataKeys)
+            .enter()
+            .append("button")
+            .on("click", buttonClick)
+            .html(d => d);
+
+        d3.select("#controlsCustom")
+            .append("button")
+            .on("click", buttonClickCustom)
+            .html("Custom")
+
+        function buttonClick(datapoint) {
+            var maxValue = d3.max(nestedOrgs, d => parseFloat(d[datapoint]));
+            var radiusScale = d3.scaleLinear().domain([0, maxValue]).range([2, 20]);
+
+            var ybRamp = d3.scaleLinear()
+                .interpolate(d3.interpolateHsl)
+                // .interpolate(d3.interpolateLab)
+                .domain([0, maxValue]).range(["blue", "yellow"]);
+
+            var tenColorScale = d3.scaleOrdinal()
+                .unknown("gray")
+                .domain([100, 200, 250, 280])
+                .range(d3.schemeCategory10);
+
+            d3.selectAll("g.overallG").select("circle")
+                .transition().duration(1000)
+                // .style("fill", d => ybRamp(d[datapoint]))
+                .style("fill", d => tenColorScale(d.companyId))
+                .attr("r", d => radiusScale(d[datapoint]));
+        }
+
+        function buttonClickCustom() {
+            var datapoint = 'length';
+            var maxValue = d3.max(nestedOrgs, d => parseFloat(d[datapoint]));
+            var colorQuantize = d3.scaleQuantize().domain([0, maxValue]).range(colorbrewer.Reds[3]);
+
+            var radiusScale = d3.scaleLinear().domain([0, maxValue]).range([2, 20]);
+
+            d3.selectAll("g.overallG").select("circle")
+                .transition().duration(1000)
+                .style("fill", d => colorQuantize(d.companyId))
+                .attr("r", d => radiusScale(d[datapoint]));
+        }
+
+        d3.text("templates/template01.html", html => {
+            d3.select("body").append("div").attr("id", "infobox").html(html)
+        });
+
+        teamG.on("click", teamClick);
+        function teamClick(d) {
+            d3.selectAll("td.data").data(d3.values(d)).html(p => {
+                if (Array.isArray(p)) {
+                    return "Value Array";
+                }
+                return p;
+            });
+        }
+
+
+        d3.html("images/football.svg", loadSVG);
+        function loadSVG(svgData) {
+            // while (!d3.select(svgData).selectAll("path").empty()) {
+            //     d3.select("svg").node().appendChild(
+            //         d3.select(svgData).select("path").node());
+            // }
+
+            // d3.select(svgData).selectAll("g").each(function (d, i) {
+            //     d3.select(this).attr("id", "footballG" + i)
+            //     d3.select("svg").node().appendChild(this);
+            // });
+
+            // d3.selectAll("#footballG0").attr("transform", "translate(50,50)");
+
+            var fourColorScale = d3.scaleOrdinal()
+                .unknown("black")
+                .domain([100, 200, 250, 280])
+                .range(["#5eafc6", "#FE9922", "#93C464", ""]);
+
+            d3.selectAll("#teamsG .overallG").each(function (d) {
+                var gParent = this;
+                // console.log("gParent", gParent);
+                d3.select(svgData).selectAll("g").each(function () {
+                    // console.log("gg", this);
+                    d3.select(this).selectAll("path")
+                        .style("fill", "#93C464")
+                        .style("stroke", "black").style("stroke-width", "1px")
+
+                    d3.select(gParent.appendChild(this.cloneNode(true)))
+                        .selectAll("path")
+                        .datum(d)
+                        .style("fill", p => fourColorScale(p.companyId));
+                });
+            })
+        }
+    });
+</script>
+
+</html>

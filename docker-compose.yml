@@ -1,0 +1,9 @@
+version: "2"
+services:
+  nginx:
+    container_name: d3gg-nginx
+    image: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./src:/usr/share/nginx/html
