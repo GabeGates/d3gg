@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3-geo-projection@4.0.0/dist/d3-geo-projection.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"
+        integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+        body,
+        html {
+            margin: 0;
+        }
+
+        canvas {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+        }
+
+        svg {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+        }
+
+        path.country {
+            fill: #C4B9AC;
+            stroke-width: 1;
+            stroke: #4F442B;
+            opacity: .5;
+        }
+
+        path.sample {
+            stroke: #41A368;
+            stroke-width: 1px;
+            fill: #93C464;
+            fill-opacity: .5;
+        }
+
+        line.link {
+            stroke-width: 1px;
+            stroke: #4F442B;
+            stroke-opacity: .5;
+        }
+
+        circle.node {
+            fill: #93C464;
+            stroke: #EBD8C1;
+            stroke-width: 1px;
+        }
+
+        circle.xy {
+            fill: #FCBC34;
+            stroke: #FE9922;
+            stroke-width: 1px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="divViz08" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <div id="divViz07" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <div id="divViz06" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <div id="divViz05" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <div id="divViz04" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <div id="divViz03" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+
+    <div id="divViz02" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+
+    <div id="divViz" class="svg500">
+        <canvas height="500" width="500"></canvas>
+        <div id="viz">
+            <svg></svg>
+        </div>
+    </div>
+
+    <!-- <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+        <div id="controls"></div>
+        <div id="controlsCustom"></div>
+    </div> -->
+
+
+</body>
+
+<script>
+
+    function createViolinPlots(selector) {
+        var fillScale = d3.scaleOrdinal().range(["#fcd88a", "#cf7c1c", "#93c464"]);
+        var normal = d3.randomNormal();
+        var sampleData1 = d3.range(100).map(d => normal());
+        var sampleData2 = d3.range(100).map(d => normal());
+        var sampleData3 = d3.range(100).map(d => normal());
+
+        var data = [sampleData1, sampleData2, sampleData3];
+
+        var histoChart = d3.histogram();
+
+        histoChart
+            .domain([-3, 3])
+            .thresholds([-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3])
+            .value(d => d);
+
+        var yScale = d3.scaleLinear().domain([-3, 3]).range([400, 0]);
+        var context = d3.select(`${selector} canvas`).node().getContext("2d");
+
+        area = d3.area()
+            .x0(d => -d.length)
+            .x1(d => d.length)
+            .y(d => yScale(d.x0))
+            .curve(d3.curveCatmullRom)
+            .context(context)
+
+        context.clearRect(0, 0, 500, 500);
+        context.translate(0, 50);
+
+        data.forEach((d, i) => {
+            context.translate(100, 0);
+            context.strokeStyle = fillScale(i);
+            context.fillStyle = d3.hsl(fillScale(i)).darker()
+            context.lineWidth = "1px";
+            context.beginPath();
+
+            area(histoChart(d));
+
+            context.stroke();
+
+            context.fill();
+        })
+
+    }
+
+    var sampleData = d3.range(1000).map(d => {
+        var datapoint = {};
+        datapoint.id = "Sample Feature " + d;
+        datapoint.type = "Feature";
+        datapoint.properties = {};
+        datapoint.geometry = {};
+        datapoint.geometry.type = "Polygon";
+        datapoint.geometry.coordinates = randomCoords();
+        return datapoint;
+    });
+
+    function randomCoords() {
+        var randX = (Math.random() * 350) - 175;
+        var randY = (Math.random() * 170) - 85;
+        return [[[randX - 5, randY], [randX, randY - 5], [randX - 10, randY - 5], [randX - 5, randY]]];
+    }
+
+    function createMap(countries, selector) {
+        var projection = d3.geoMercator().scale(50).translate([150, 100]);
+        var geoPath = d3.geoPath().projection(projection);
+
+        var mapZoom = d3.zoom().on("zoom", zoomed);
+
+        var zoomSettings = d3.zoomIdentity
+            .translate(250, 250)
+            .scale(100);
+
+        d3.select(`${selector} svg`)
+            .call(mapZoom)
+            .call(mapZoom.transform, zoomSettings);
+
+        function zoomed() {
+            var e = d3.event;
+            projection.translate([e.transform.x, e.transform.y]).scale(e.transform.k);
+
+            d3.selectAll("path.country, path.sample")
+                .attr("d", geoPath);
+        }
+
+
+        var g = d3.select(`${selector} svg`)
+            .append("g");
+
+        g.selectAll("path.country")
+            .data(countries.features)
+            .enter()
+            .append("path")
+            .attr("d", geoPath)
+            .attr("class", "country");
+
+        g.selectAll("path.sample")
+            .data(sampleData)
+            .enter()
+            .append("path")
+            .attr("d", geoPath)
+            .attr("class", "sample")
+    }
+
+    function createMapCanvas(countries, selector) {
+        var projection = d3.geoMercator().scale(50).translate([150, 100]);
+        var geoPath = d3.geoPath().projection(projection);
+
+        var mapZoom = d3.zoom().on("zoom", zoomed);
+
+        var zoomSettings = d3.zoomIdentity
+            .translate(250, 250)
+            .scale(100);
+
+        d3.select(`${selector} svg`)
+            .call(mapZoom)
+            .call(mapZoom.transform, zoomSettings);
+
+        function zoomed() {
+            var e = d3.event;
+            projection.translate([e.transform.x, e.transform.y]).scale(e.transform.k);
+
+            var context = d3.select(`${selector} canvas`).node().getContext("2d");
+            context.clearRect(0, 0, 500, 500);
+            geoPath.context(context);
+
+            context.strokeStyle = "rgba(79,68,43,.5)"
+            context.fillStyle = "rgba(196,185,172,.5)"
+            context.fillOpacity = 0.5;
+            context.lineWidth = "1px";
+
+            for (var x in countries.features) {
+                context.beginPath();
+                geoPath(countries.features[x]);
+                context.stroke();
+                context.fill();
+            }
+
+            context.strokeStyle = "#41A368";
+            context.fillStyle = "rgba(147,196,100,.5)";
+            context.lineWidth = "1px";
+
+            for (var x in sampleData) {
+                context.beginPath();
+                geoPath(sampleData[x])
+                context.stroke();
+                context.fill();
+            }
+        }
+    }
+
+    function createMapMixed(countries, selector) {
+        var projection = d3.geoMercator().scale(50).translate([150, 100]);
+        var geoPath = d3.geoPath().projection(projection);
+        var svgPath = d3.geoPath().projection(projection);
+
+
+
+        d3.select(`${selector} svg`)
+            .selectAll("path.sample")
+            .data(sampleData)
+            .enter()
+            .append("path")
+            .attr("d", svgPath)
+            .attr("class", "sample")
+            .on("mouseover", function () {
+                d3.select(this).style("fill", "#75739F")
+            });
+
+
+        var mapZoom = d3.zoom()
+            .on("zoom", zoomed);
+
+        var zoomSettings = d3.zoomIdentity
+            .translate(250, 250)
+            .scale(100);
+
+        d3.select(`${selector} svg`)
+            .call(mapZoom)
+            .call(mapZoom.transform, zoomSettings);
+
+        function zoomed() {
+            var zoomEvent = d3.event;
+            projection.translate([zoomEvent.transform.x, zoomEvent.transform.y]).scale(zoomEvent.transform.k);
+
+            const featureOpacity = 0.5;
+
+            var context = d3.select(`${selector} canvas`).node().getContext("2d");
+            context.clearRect(0, 0, 500, 500);
+            geoPath.context(context);
+
+            context.strokeStyle = `rgba(79,68,43,${featureOpacity})`
+            context.fillStyle = `rgba(196,185,172,${featureOpacity})`
+            context.lineWidth = "1px";
+
+            countries.features.forEach(feature => {
+                context.beginPath();
+                geoPath(feature);
+                context.stroke();
+                context.fill();
+            })
+
+            d3.selectAll(`${selector} path.sample`).attr("d", svgPath);
+        }
+    }
+
+    function createMapInteraction(countries, selector) {
+        var projection = d3.geoMercator().scale(100).translate([250, 250]);
+        var geoPath = d3.geoPath().projection(projection);
+        var svgPath = d3.geoPath().projection(projection);
+        var canvasPath = d3.geoPath().projection(projection);
+
+
+
+
+        d3.select(`${selector} svg`)
+            .selectAll("path.sample")
+            .data(sampleData)
+            .enter()
+            .append("path")
+            .attr("d", svgPath)
+            .attr("class", "sample")
+            .on("mouseover", function () {
+                d3.select(this).style("fill", "#75739F")
+            });
+
+
+        var mapZoom = d3.zoom()
+            .on("zoom", zoomed)
+            .on("start", zoomInitialized)
+            .on("end", zoomFinished);
+
+        var zoomSettings = d3.zoomIdentity
+            .translate(250, 250)
+            .scale(100);
+
+        d3.select(`${selector} svg`)
+            .call(mapZoom)
+            .call(mapZoom.transform, zoomSettings);
+
+        function zoomed() {
+            var e = d3.event;
+            projection.translate([e.transform.x, e.transform.y]).scale(e.transform.k);
+
+            var context = d3.select(`${selector} canvas`).node().getContext("2d");
+            context.clearRect(0, 0, 500, 500);
+            canvasPath.context(context);
+
+            context.strokeStyle = `black`
+            context.fillStyle = `gray`
+            context.lineWidth = "1px";
+
+            for (var x in countries.features) {
+                context.beginPath();
+                canvasPath(countries.features[x]);
+                context.stroke();
+                context.fill();
+            }
+
+            context.strokeStyle = "black";
+            context.fillStyle = "rgba(255,0,0,.2)";
+            context.lineWidth = 1;
+
+            for (var x in sampleData) {
+                context.beginPath();
+                canvasPath(sampleData[x]);
+                context.stroke();
+                context.fill();
+            }
+        };
+
+        function zoomInitialized() {
+            d3.selectAll(`${selector} path.sample`)
+                .style("display", "none")
+            zoomed();
+        }
+
+        function zoomFinished() {
+            var context = d3.select(`${selector} canvas`).node().getContext("2d");
+            context.clearRect(0, 0, 500, 500);
+            canvasPath.context(context);
+            context.strokeStyle = "black";
+            context.fillStyle = "gray";
+            context.lineWidth = "1px";
+
+            for (var x in countries.features) {
+                context.beginPath();
+                canvasPath(countries.features[x]);
+                context.stroke();
+                context.fill();
+            }
+
+            d3.selectAll(`${selector} path.sample`)
+                .style("display", "block")
+                .attr("d", svgPath);
+        }
+
+    }
+
+
+    var linkScale = d3.scaleLinear().domain([0, .9, .95, 1]).range([0, 10, 100, 1000])
+    var sampleNodes = d3.range(3000).map(d => {
+        var datapoint = {};
+        datapoint.id = `Sample Node ${d}`;
+        return datapoint;
+    });
+
+    var sampleLinks = [];
+    var y = 0;
+    while (y < 1000) {
+        var randomSource = Math.floor(Math.random() * 1000);
+        var randomTarget = Math.floor(linkScale(Math.random()));
+        var linkObject = { source: sampleNodes[randomSource], target: sampleNodes[randomTarget] };
+
+        if (randomSource != randomTarget) {
+            sampleLinks.push(linkObject);
+        }
+        y++;
+    }
+
+    function createNetworkData(selector) {
+        var force = d3.forceSimulation()
+            .nodes(sampleNodes)
+            .force("x", d3.forceX(250).strength(1.1))
+            .force("y", d3.forceY(250).strength(1.1))
+            .force("charge", d3.forceManyBody())
+            .force("charge", d3.forceManyBody())
+            .force("link", d3.forceLink())
+            .on("tick", forceTick);
+
+        force.force("link").links(sampleLinks);
+
+        d3.select(`${selector} svg`)
+            .selectAll("line.link")
+            .data(sampleLinks)
+            .enter()
+            .append("line")
+            .attr("class", "link");
+
+        d3.select(`${selector} svg`)
+            .selectAll("circle.node")
+            .data(sampleNodes)
+            .enter()
+            .append("circle")
+            .attr("r", 3)
+            .attr("class", "node")
+
+        function forceTick() {
+            d3.selectAll(`${selector} line.link`)
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            d3.selectAll(`${selector} circle.node`)
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        }
+    }
+
+    function createNetworkDataWithCanvas(selector) {
+        var force = d3.forceSimulation()
+            .nodes(sampleNodes)
+            .force("x", d3.forceX(250).strength(1.1))
+            .force("y", d3.forceY(250).strength(1.1))
+            .force("charge", d3.forceManyBody())
+            .force("charge", d3.forceManyBody())
+            .force("link", d3.forceLink())
+            .on("tick", forceTick);
+
+        force.force("link").links(sampleLinks);
+
+        d3.select(`${selector} svg`)
+            .selectAll("line.link")
+            .data(sampleLinks)
+            .enter()
+            .append("line")
+            .attr("class", "link");
+
+        d3.select(`${selector} svg`)
+            .selectAll("circle.node")
+            .data(sampleNodes)
+            .enter()
+            .append("circle")
+            .attr("r", 3)
+            .attr("class", "node")
+
+        function forceTick() {
+            var context = d3.select(`${selector} canvas`).node().getContext("2d");
+            context.clearRect(0, 0, 500, 500);
+            context.lineWidth = 1;
+            context.strokeStyle = "rgba(0, 0, 0, 0.5)";
+
+            sampleLinks.forEach(function (link) {
+                context.beginPath();
+                context.moveTo(link.source.x, link.source.y);
+                context.lineTo(link.target.x, link.target.y);
+                context.stroke();
+            })
+
+            d3.selectAll(`${selector} circle.node`)
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        }
+    }
+
+    var quadSampleData = d3.range(10000).map(function (d) {
+        var datapoint = {};
+        datapoint.id = `Sample Node ${d}`;
+        datapoint.x = Math.random() * 500;
+        datapoint.y = Math.random() * 500;
+        return datapoint;
+    });
+
+    function createQuadTree(selector) {
+        // var quadtree = d3.quadtree().extent([[0, 0], [500, 500]]);
+        var quadIndex = d3.quadtree(quadSampleData, d => d.x, d => d.y);
+
+        d3.select(`${selector} svg`)
+            .selectAll("circle")
+            .data(quadSampleData)
+            .enter()
+            .append("circle")
+            .attr("class", "xy")
+            .attr("r", 3)
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+
+        var brush = d3.brush()
+            .extent([[0, 0], [500, 500]])
+            .on("brush", brushed);
+
+        d3.select(`${selector} svg`).call(brush);
+
+        function brushed() {
+            var e = d3.event.selection;
+
+            // Without Quadtree
+            // d3.selectAll(`${selector} circle`)
+            //     .style("fill", d => {
+            //         if (d.x >= e[0][0] && d.x <= e[1][0] && d.y >= e[0][1] && d.y <= e[1][1]) {
+            //             return "#FE9922";
+            //         } else {
+            //             return "#EBD8C1";
+            //         }
+            //     })
+
+            d3.selectAll(`${selector} circle`)
+                // .filter(d => d.selected)
+                .style("fill", "#EBD8C1")
+                .each(d => { d.selected = false })
+
+            quadIndex.visit(function (node, x0, y0, x1, y1) {
+                if (node.data) {
+                    if (node.data.x >= e[0][0] && node.data.x <= e[1][0] && node.data.y >= e[0][1] && node.data.y <= e[1][1]) {
+                        node.data.selected = true;
+                    }
+                }
+            })
+
+            d3.selectAll(`${selector} circle`)
+                .filter(d => d.selected)
+                .style("fill", "#FE9922")
+        }
+    }
+
+    createViolinPlots("#divViz");
+    createNetworkData('#divViz06');
+    createNetworkDataWithCanvas('#divViz07');
+    createQuadTree('#divViz08');
+    fetchData();
+    function fetchData() {
+        var promises = [
+            d3gg.promiseJSON("data/world.geojson")
+        ];
+
+        Promise.all(promises).then(function (responses) {
+            let world = JSON.stringify(responses[0]);
+
+            createMap(JSON.parse(world), '#divViz02');
+            createMapCanvas(JSON.parse(world), '#divViz03');
+            createMapMixed(JSON.parse(world), '#divViz04');
+            createMapInteraction(JSON.parse(world), '#divViz05');
+        })
+    }
+</script>
+
+</html>

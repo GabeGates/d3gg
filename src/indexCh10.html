@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="./d3gg.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"
+        integrity="sha512-wNH6xsp2n8CfB91nrBtfc4sfLwYPBMjSWVUwQOp60AYYXH6i8yCwuKFZ4rgK2i6pQek/b+bSyR7b01/922IBzQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3-geo-projection@4.0.0/dist/d3-geo-projection.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"
+        integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="./d3js.colorbrewer.v1.min.js"></script>
+    <script src="./d3gg.js"></script>
+
+
+    <style>
+        rect.overlay {
+            opacity: 0;
+        }
+
+        rect.selection {
+            fill: #FE9922;
+            opacity: 0.5;
+        }
+
+        rect.handle {
+            fill: #FE9922;
+            opacity: 0.25;
+        }
+
+        path.countries {
+            stroke-width: 1;
+            stroke: #75739F;
+            fill: #5EAFC6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="viz03">
+        <svg class="svg001 svg1000"></svg>
+        <div id="controls"></div>
+        <div id="controlsCustom"></div>
+    </div>
+
+    <div id="viz02">
+        <svg class="svg001 svg1000"></svg>
+        <div id="controls"></div>
+        <div id="controlsCustom"></div>
+    </div>
+
+    <div id="viz">
+        <svg class="svg001 svg1000"></svg>
+        <div id="controls"></div>
+        <div id="controlsCustom"></div>
+    </div>
+
+
+</body>
+
+<script>
+    d3.gridLayout = function () {
+        var gridSize = [0, 10];
+        var gridXScale = d3.scaleLinear();
+        var gridYScale = d3.scaleLinear();
+
+        function processGrid(data) {
+            var rows = Math.ceil(Math.sqrt(data.length));
+            var columns = rows;
+
+            gridXScale.domain([1, columns]).range([0, gridSize[0]]);
+            gridYScale.domain([1, rows]).range([0, gridSize[1]]);
+
+            var gridCellWidth = gridSize[0] / columns;
+            var gridCellHeight = gridSize[1] / rows;
+
+            var cell = 0;
+            for (var rowNumber = 0; rowNumber < rows; rowNumber++) {
+                for (var cellNumber = 0; cellNumber < columns; cellNumber++) {
+                    if (data[cell]) {
+                        data[cell].x = gridXScale(cellNumber);
+                        data[cell].y = gridYScale(rowNumber);
+                        data[cell].height = gridCellHeight;
+                        data[cell].width = gridCellWidth;
+                        cell++;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            return data;
+        }
+
+        processGrid.size = function (newSize) {
+            if (!arguments.length) return gridSize;
+
+            gridSize = newSize;
+            return this;
+        }
+
+        return processGrid;
+    }
+
+    function makeAGrid(data, selector) {
+        // var scale = d3.scaleLinear().domain([0, 5]).range([100, 400]);
+        var salaryScale = d3.scaleLinear().domain([0, 300000]).range([1, 30]).clamp(true);
+
+
+        var grid = d3.gridLayout();
+        grid.size([400, 400])
+        var griddedData = grid(data);
+
+        d3.select(`${selector} svg`)
+            .append("g")
+            .attr("transform", "translate(300,300)")
+            .selectAll("circle")
+            .data(griddedData)
+            .enter()
+            .append("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => salaryScale(d.salary))
+            .style("fill", "#93C464");
+
+        var newEmployees = [];
+
+        for (var x = 0; x < 14; x++) {
+            var newPerson = { id: "New Person " + x, salary: x * 20000 };
+            newEmployees.push(newPerson);
+        }
+
+        var doubledArray = data.concat(newEmployees);
+        var newGriddedData = grid(doubledArray);
+
+        d3.select(`${selector} g`).selectAll("circle")
+            .data(newGriddedData)
+            .enter()
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", d => salaryScale(d.salary))
+            .style("fill", "#41A368");
+
+        d3.select(`${selector} g`).selectAll("circle")
+            .transition()
+            .duration(1000)
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .on("end", resizeGrid1);
+
+        function resizeGrid1() {
+            grid.size([200, 400]);
+            grid(doubledArray);
+            d3.select(`${selector} g`).selectAll("circle")
+                .transition()
+                .duration(1000)
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .on("end", resizeGrid2);
+        }
+
+        function resizeGrid2() {
+            grid.size([400, 200]);
+            grid(doubledArray);
+            d3.select(`${selector} g`).selectAll("circle")
+                .transition()
+                .duration(1000)
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        }
+    }
+
+    function makeAGridRect(data, selector) {
+        // var scale = d3.scaleLinear().domain([0, 5]).range([100, 400]);
+        var salaryScale = d3.scaleLinear().domain([0, 300000]).range([1, 30]).clamp(true);
+
+
+        var grid = d3.gridLayout();
+        grid.size([400, 400])
+        var griddedData = grid(data);
+
+        d3.select(`${selector} svg`)
+            .append("g")
+            .attr("transform", "translate(300,300)")
+            .selectAll("circle")
+            .data(griddedData)
+            .enter()
+            .append("rect")
+            .attr("x", d => d.x - (d.width / 2))
+            .attr("y", d => d.y - (d.height / 2))
+            .attr("width", d => d.width)
+            .attr("height", d => d.height)
+            .style("fill", "#93C464");
+
+        var newEmployees = [];
+
+        for (var x = 0; x < 14; x++) {
+            var newPerson = { id: "New Person " + x, salary: x * 20000 };
+            newEmployees.push(newPerson);
+        }
+
+        var doubledArray = data.concat(newEmployees);
+        var newGriddedData = grid(doubledArray);
+
+        d3.select(`${selector} g`).selectAll("rect")
+            .data(newGriddedData)
+            .enter()
+            .append("rect")
+            .style("fill", "#41A368");
+
+        d3.select(`${selector} g`).selectAll("rect")
+            .transition()
+            .duration(1000)
+            .attr("x", d => d.x - (d.width / 2))
+            .attr("y", d => d.y - (d.height / 2))
+            .attr("width", d => d.width)
+            .attr("height", d => d.height)
+            .on("end", resizeGrid1);
+
+        function resizeGrid1() {
+            grid.size([200, 400]);
+            grid(doubledArray);
+            d3.select(`${selector} g`).selectAll("rect")
+                .transition()
+                .duration(1000)
+                .attr("x", d => d.x - (d.width / 2))
+                .attr("y", d => d.y - (d.height / 2))
+                .attr("width", d => d.width)
+                .attr("height", d => d.height)
+                .on("end", resizeGrid2);
+        }
+
+        function resizeGrid2() {
+            grid.size([400, 200]);
+            grid(doubledArray);
+            d3.select(`${selector} g`).selectAll("rect")
+                .transition()
+                .duration(1000)
+                .attr("x", d => d.x - (d.width / 2))
+                .attr("y", d => d.y - (d.height / 2))
+                .attr("width", d => d.width)
+                .attr("height", d => d.height);
+        }
+    }
+
+    d3.simpleLegend = function () {
+        var data = [];
+        var size = [300, 20];
+        var xScale = d3.scaleLinear();
+        var scale;
+        var title = "Legend";
+        var numberFormat = d3.format(".4n");
+        var units = "Units";
+
+
+        function legend(gSelection) {
+            createLegendData(scale);
+            var xMin = d3.min(data, d => d.domain[0]);
+            var xMax = d3.max(data, d => d.domain[1]);
+
+            xScale.domain([xMin, xMax]).range([0, size[0]]);
+
+            gSelection.selectAll("rect")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("height", size[1])
+                .attr("width", d => xScale(d.domain[1]) - xScale(d.domain[0]))
+                .attr("x", d => xScale(d.domain[0]))
+                .style("fill", d => d.color);
+
+            gSelection.selectAll("line")
+                .data(data)
+                .enter()
+                .append("line")
+                .attr("x1", d => xScale(d.domain[0]))
+                .attr("x2", d => xScale(d.domain[0]))
+                .attr("y1", 0)
+                .attr("y2", d => size[1] + 5)
+                .style("stroke", "black")
+                .style("stroke-width", "2px");
+
+            gSelection.selectAll("text")
+                .data(data)
+                .enter()
+                .append("g")
+                .attr("transform", d => `translate(${(xScale(d.domain[0]))}, ${(size[1] + 20)})`)
+                .append("text")
+                .style("text-anchor", "middle")
+                .text(d => numberFormat(d.domain[0]));
+
+
+            gSelection.append("text")
+                .attr("transform", d => `translate(${(xScale(xMin))}, ${(size[1] - 30)})`)
+                .text(title)
+
+            gSelection.append("text")
+                .attr("transform", d => `translate(${(xScale(xMax))}, ${(size[1] + 20)})`)
+                .text(units)
+
+            return this;
+        }
+
+        function createLegendData(incScale) {
+            var rangeArray = incScale.range();
+            data = [];
+            for (var x in rangeArray) {
+                var colorValue = rangeArray[x];
+                var domainValues = incScale.invertExtent(colorValue);
+                data.push({ color: colorValue, domain: domainValues })
+            }
+        }
+
+        legend.scale = function (newScale) {
+            if (!arguments.length) return scale;
+
+            scale = newScale;
+            return this;
+        };
+
+        legend.title = function (newTitle) {
+            if (!arguments.length) return title;
+
+            title = newTitle;
+            return this;
+        };
+
+        legend.unitLabel = function (newUnits) {
+            if (!arguments.length) return units;
+
+            units = newUnits;
+            return this;
+        };
+
+        legend.formatter = function (newFormatter) {
+            if (!arguments.length) return numberFormat;
+
+            numberFormat = newFormatter;
+            return this;
+        };
+
+        return legend;
+    }
+
+    function makeAGridWorld(data, selector) {
+        var grid = d3.gridLayout();
+        grid.size([300, 300])
+
+        var griddedData = grid(data.features);
+
+
+        griddedData.forEach(country => {
+            country.size = d3.geoArea(country);
+        });
+
+        d3.select(`${selector} svg`)
+            .append("g")
+            .attr("transform", "translate(300,300)")
+            .selectAll("circle")
+            .data(griddedData)
+            .enter()
+            .append("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", 10)
+            .style("fill", "#75739F")
+            .style("stroke", "#4F442B")
+            .style("stroke-width", "1px");
+
+        var griddedData = d3.selectAll(`${selector} circle`).data();
+        var sizeExtent = d3.extent(griddedData, d => d.size);
+        var countryColor = d3.scaleQuantize().domain(sizeExtent).range(colorbrewer.Reds[7]);
+        d3.selectAll(`${selector} circle`).style("fill", d => countryColor(d.size));
+
+        var newLegend = d3.simpleLegend()
+            .scale(countryColor)
+            .title("Country Size")
+            .formatter(d3.format(".2f"))
+            .unitLabel("Steradians");
+
+        d3.select(`${selector} svg`)
+            .append("g")
+            .attr("id", "legend")
+            .attr("transform", "translate(275, 600)")
+            .call(newLegend)
+
+
+        d3.select(`${selector} #legend`)
+            .selectAll("rect")
+            .on("mouseover", legendOver);
+
+        function legendOver(d) {
+            d3.selectAll(`${selector} circle`)
+                .style("opacity", p => {
+                    if (p.size >= d.domain[0] && p.size <= d.domain[1]) {
+                        return 1;
+                    } else {
+                        return .25;
+                    }
+                })
+        }
+    }
+
+
+
+    fetchData();
+    function fetchData() {
+        var promises = [
+            d3gg.promiseCSV("data/nodelist.csv"),
+            d3gg.promiseJSON("data/world.geojson")
+        ];
+
+        Promise.all(promises).then(function (responses) {
+            let nodeList = JSON.stringify(responses[0]);
+            let world = JSON.stringify(responses[1]);
+
+            makeAGrid(JSON.parse(nodeList), '#viz');
+            makeAGridRect(JSON.parse(nodeList), '#viz02');
+            makeAGridWorld(JSON.parse(world), '#viz03');
+        })
+    }
+</script>
+
+</html>
